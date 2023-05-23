@@ -1,0 +1,33 @@
+version: '3'
+services:
+  nginx:
+    container_name: web
+    build:
+      context: .
+      dockerfile: ./docker/nginx/nginx.Dockerfile
+    ports:
+      - '80:80'
+    networks:
+      app_net:
+        ipv4_address: 10.0.10.1
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: ./docker/app/laravel.Dockerfile
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    depends_on:
+      - nginx
+    networks:
+      app_net:
+        ipv4_address: 10.0.20.1
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/16
