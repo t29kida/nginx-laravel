@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/nginx/nginx.Dockerfile
+      target: staging
     ports:
       - '80:80'
     networks:
@@ -15,6 +16,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/app/laravel.Dockerfile
+      target: development
     ports:
       - '8000:8000'
     volumes:

@@ -1,66 +1,106 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NGINX + Laravel v10.11.0
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 環境
 
-## About Laravel
+- Docker: 23.0.5
+- Docker Compose: v2.17.3
+- PHP: 8.2.6
+- Laravel: v10.11.0
+- NGINX: 1.23.4
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## コンテナについて
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- NGINX用のコンテナ
+  - コンテナ名: nginx
+  - コンテナip_address: 10.0.10.1(compose.ymlで定義)
+- Laravel用のコンテナ
+  - コンテナ名: app
+  - コンテナip_address: 10.0.20.1(compose.ymlで定義)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## コンテナ起動手順（開発時）
 
-## Learning Laravel
+### 1. プロジェクトをクローンする
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```sh
+git clone https://github.com/t29kida/nginx-laravel.git
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 2. プロジェクトディレクトリに移動する
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```sh
+cd ./nginx-laravel
+```
 
-## Laravel Sponsors
+### 3 `.evn`ファイルを作成する
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+```sh
+cp .env.example .env
+```
 
-### Premium Partners
+### 4. Laravel用コンテナをビルドする
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+手順5, 6のコマンドを実行するためのイメージをビルドする。
 
-## Contributing
+```sh
+docker build --target=development -t app:latest -f ./docker/app/laravel.Dockerfile .
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 5. composer installを実行する
 
-## Code of Conduct
+`vendor`を作成する。
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```sh
+docker run --rm --name app -v $PWD:/app app:latest composer install
+```
 
-## Security Vulnerabilities
+### 6. `APP_KEY`を生成する
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```sh
+docker run --rm --name app -v $PWD:/app app:latest php artisan key:generate
+```
 
-## License
+### 7. NGINXとLaravelをdocker composeで起動する
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```sh
+docker compose up -d --build
+```
+
+### 8. Laravelの開発用サーバーを起動する
+
+```sh
+docker compose exec app php artisan serve --host 0.0.0.0 --port 8000
+```
+
+任意のWebブラウザで`http://localhost:8000`を開くと起動していることを確認できる。
+
+## コンテナ起動手順（ステージング環境相当？）
+
+### 前提条件
+
+- APP_KEYを生成していること
+  - 参考: https://laravel.com/docs/10.x/encryption
+
+### `compose.yml`を編集
+
+```yml
+# ここまで省略
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: ./docker/app/laravel.Dockerfile
+      target: staging # developmentからstagingに変更
+    ports:
+      - '8000:8000'
+    # volumes:
+    #   - .:/app # volumesをコメントアウつ
+    depends_on:
+      - nginx
+# ここから省略
+```
+
+### コンテナ起動
+
+```sh
+docker compose up --build
+```
