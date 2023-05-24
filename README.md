@@ -75,11 +75,6 @@ docker compose exec app php artisan serve --host 0.0.0.0 --port 8000
 
 ## コンテナ起動手順（ステージング環境相当？）
 
-### 前提条件
-
-- APP_KEYを生成していること
-  - 参考: https://laravel.com/docs/10.x/encryption
-
 ### `compose.yml`を編集
 
 ```yml

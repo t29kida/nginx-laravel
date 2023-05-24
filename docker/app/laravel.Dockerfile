@@ -15,7 +15,10 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 COPY . /app
+# 実際の運用時のAPP_KEYはAWSのParameter StoreもしくはSecrets Managerで管理すること
+RUN cp .env.example .env
 RUN composer install --optimize-autoloader --no-dev && \
+    php artisan key:generate && \
     php artisan config:cache && \
     php artisan event:cache && \
     php artisan route:cache && \
